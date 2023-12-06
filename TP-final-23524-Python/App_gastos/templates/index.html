@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <title>Personal Finance Management</title>
+</head>
+
+<body onload="getExpenses()">
+    <div class="container mt-5">
+        <h1>Añadir Nuevo Gasto</h1>
+        <form action="/add_expense" method="post" onsubmit="addExpense(); return false;">
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="category">Categoría:</label>
+                    <input type="text" class="form-control" id="category" name="category" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="amount">Monto:</label>
+                    <input type="number" class="form-control" id="amount" name="amount" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="description">Descripción:</label>
+                <input type="text" class="form-control" id="description" name="description">
+            </div>
+            <div class="form-group">
+                <label for="date">Fecha:</label>
+                <input type="date" class="form-control" id="date" name="date" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Agregar Gasto</button>
+        </form>
+        <hr />
+        <button class="btn btn-success" onclick="getExpenses()">Obtener Gastos</button>
+    </div>
+
+    <div class="container mt-5">
+        <h1>Lista de Gastos</h1>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Categoría</th>
+                    <th>Monto</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="expenseList"></tbody>
+        </table>
+
+        <h3>Total Gastos: $<span id="totalExpense">0.0</span></h3>
+    </div>
+
+    <script>
+        function addExpense() {
+            const category = document.getElementById('category').value;
+            const amount = document.getElementById('amount').value;
+            const description = document.getElementById('description').value;
+            const date = document.getElementById('date').value;
+
+            const formData = new FormData();
+            formData.append('category', category);
+            formData.append('amount', amount);
+            formData.append('description', description);
+            formData.append('date', date);
+
+            fetch('http://127.0.0.1:5000/add_expense', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    location.reload();
+                })
+                .catch(error => {
+                    console.error('Error adding expense:', error);
+                });
+        }
+
+        function getExpenses() {
+            fetch('http://127.0.0.1:5000/get_expenses', {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server returned ${response.status} ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Log the received data
+                    console.log('Expenses:', data.expenses);
+
+                    const expenseList = document.getElementById('expenseList');
+                    const totalExpense = document.getElementById('totalExpense');
+
+                    expenseList.innerHTML = '';  // Clear the existing content
+
+                    data.expenses.forEach(expense => {
+                        const listItem = document.createElement('tr');
+                        listItem.innerHTML = `
+                            <td>${expense.id}</td>
+                            <td>${expense.category}</td>
+                            <td>$${expense.amount}</td>
+                            <td>${expense.description}</td>
+                            <td>${expense.date}</td>
+                            <td>
+                                <button class="btn btn-danger" onclick="deleteExpense(${expense.id})">Eliminar</button>
+                            </td>
+                        `;
+                        expenseList.appendChild(listItem);
+                    });
+
+                    totalExpense.textContent = data.totalExpense.toFixed(2);
+                })
+                .catch(error => {
+                    alert(`Error fetching expenses. Please try again later.`);
+                });
+        }
+
+        function deleteExpense(id) {
+            fetch(`http://127.0.0.1:5000/delete_expense/${id}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    location.reload();
+                });
+        }
+    </script>
+</body>
+
+</html>
